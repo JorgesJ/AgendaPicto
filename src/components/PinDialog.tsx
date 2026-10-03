@@ -1,5 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Keyboard,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+
+function useKeyboardHeight(active: boolean) {
+  const [kbH, setKbH] = useState(0);
+  useEffect(() => {
+    if (!active) {
+      setKbH(0);
+      return;
+    }
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) =>
+      setKbH(e.endCoordinates.height)
+    );
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbH(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [active]);
+  return kbH;
+}
 
 interface Props {
   visible: boolean;
@@ -14,6 +45,7 @@ export default function PinDialog({ visible, mode, title, onCancel, onSubmit }: 
   const [pin2, setPin2] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const kbH = useKeyboardHeight(visible);
 
   useEffect(() => {
     if (visible) {
@@ -48,7 +80,12 @@ export default function PinDialog({ visible, mode, title, onCancel, onSubmit }: 
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { paddingBottom: kbH }]}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.dialog}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.label}>
@@ -92,6 +129,7 @@ export default function PinDialog({ visible, mode, title, onCancel, onSubmit }: 
             </TouchableOpacity>
           </View>
         </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -101,8 +139,15 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  scroll: {
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
   },
   dialog: {
     backgroundColor: '#fff',

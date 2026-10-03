@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
+  Keyboard,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -34,12 +36,34 @@ interface ArasaacResult {
   keywords: { keyword: string }[];
 }
 
-type View_ = 'menu' | 'name' | 'arasaac' | 'mispictos';
+function useKeyboardHeight(active: boolean) {
+  const [kbH, setKbH] = useState(0);
+  useEffect(() => {
+    if (!active) {
+      setKbH(0);
+      return;
+    }
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) =>
+      setKbH(e.endCoordinates.height)
+    );
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbH(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [active]);
+  return kbH;
+}
+
+type View_ = 'name' | 'menu' | 'arasaac';
+
+const normalize = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 export default function AddPictoModal({ visible, period, misPictos, onClose, onAdd }: Props) {
-  const [view, setView] = useState<View_>('menu');
-  const [pendingUri, setPendingUri] = useState<string | null>(null);
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [view, setView] = useState<View_>('name');
+  const kbH = useKeyboardHeight(visible);
   const [name, setName] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ArasaacResult[]>([]);
@@ -47,9 +71,7 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
   const [searchError, setSearchError] = useState('');
 
   const reset = () => {
-    setView('menu');
-    setPendingUri(null);
-    setPendingUrl(null);
+    setView('name');
     setName('');
     setQuery('');
     setResults([]);
@@ -68,6 +90,41 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
     });
   };
 
+  const addFromBase64 = (b64: string) => {
+    onAdd({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      text: name.trim(),
+      localUri: b64,
+      isBase64: true,
+      forbidden: false,
+      addedAt: Date.now(),
+    });
+    close();
+  };
+
+  const submitName = () => {
+    const n = name.trim();
+    if (!n) return;
+    const found = misPictos.find((p) => normalize(p.text) === normalize(n));
+    if (found) {
+      onAdd({
+        ...found,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        forbidden: false,
+        addedAt: Date.now(),
+      });
+      close();
+    } else {
+      setView('menu');
+    }
+  };
+
+  const openArasaac = () => {
+    setQuery(name.trim());
+    setView('arasaac');
+    searchArasaac(name.trim());
+  };
+
   const pickFromGallery = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
@@ -77,8 +134,7 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
     });
     if (!result.canceled && result.assets[0]) {
       const b64 = await uriToBase64(result.assets[0].uri);
-      setPendingUri(b64);
-      setView('name');
+      addFromBase64(b64);
     }
   };
 
@@ -88,19 +144,19 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
     if (!result.canceled && result.assets[0]) {
       const b64 = await uriToBase64(result.assets[0].uri);
-      setPendingUri(b64);
-      setView('name');
+      addFromBase64(b64);
     }
   };
 
-  const searchArasaac = async () => {
-    if (!query.trim()) return;
+  const searchArasaac = async (q?: string) => {
+    const term = (typeof q === 'string' ? q : query).trim();
+    if (!term) return;
     setLoading(true);
     setSearchError('');
     setResults([]);
     try {
       const res = await axios.get<ArasaacResult[]>(
-        `https://api.arasaac.org/v1/pictograms/es/search/${encodeURIComponent(query.trim())}`
+        `https://api.arasaac.org/v1/pictograms/es/search/${encodeURIComponent(term)}`
       );
       setResults(res.data);
       if (res.data.length === 0) setSearchError('Sin resultados');
@@ -114,7 +170,7 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
   const selectArasaac = (item: ArasaacResult) => {
     const picto: Pictogram = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      text: item.keywords[0]?.keyword ?? 'pictograma',
+      text: name.trim() || (item.keywords[0]?.keyword ?? 'pictograma'),
       imageUrl: `https://static.arasaac.org/pictograms/${item._id}/${item._id}_500.png`,
       forbidden: false,
       addedAt: Date.now(),
@@ -123,40 +179,41 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
     close();
   };
 
-  const confirmName = () => {
-    if (!name.trim()) return;
-    const picto: Pictogram = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      text: name.trim(),
-      imageUrl: pendingUrl ?? undefined,
-      localUri: pendingUri ?? undefined,
-      isBase64: pendingUri !== null && pendingUrl === null,
-      forbidden: false,
-      addedAt: Date.now(),
-    };
-    onAdd(picto);
-    close();
-  };
-
-  const selectMisPicto = (p: Pictogram) => {
-    onAdd({
-      ...p,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      forbidden: false,
-      addedAt: Date.now(),
-    });
-    close();
-  };
-
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <View style={styles.overlay}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
+      <View style={[styles.overlay, { paddingBottom: kbH }]}>
         <View style={styles.sheet}>
+          {view === 'name' && (
+            <>
+              <Text style={styles.title}>Añadir Actividad</Text>
+              <Text style={styles.label}>Nombre del pictograma:</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                onSubmitEditing={submitName}
+                returnKeyType="done"
+                autoFocus
+              />
+              <View style={styles.buttonsRow}>
+                <TouchableOpacity style={[styles.dialogButton, styles.cancelBg]} onPress={close}>
+                  <Text style={styles.dialogButtonText}>CANCELAR</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dialogButton, styles.addBg, !name.trim() && styles.disabled]}
+                  onPress={submitName}
+                  disabled={!name.trim()}
+                >
+                  <Text style={styles.dialogButtonText}>AÑADIR</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
           {view === 'menu' && (
             <>
-              <Text style={styles.title}>
-                Añadir a {period ? PERIOD_LABELS[period] : ''}
-              </Text>
+              <Text style={styles.title}>{name.trim()}</Text>
+              <Text style={styles.label}>No está guardado. Elige de dónde sacarlo:</Text>
               <View style={styles.grid}>
                 <TouchableOpacity style={styles.option} onPress={pickFromGallery}>
                   <Text style={styles.optionEmoji}>🖼️</Text>
@@ -166,41 +223,13 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
                   <Text style={styles.optionEmoji}>📷</Text>
                   <Text style={styles.optionText}>Cámara</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.option} onPress={() => setView('arasaac')}>
+                <TouchableOpacity style={styles.option} onPress={openArasaac}>
                   <Text style={styles.optionEmoji}>🔍</Text>
                   <Text style={styles.optionText}>ARASAAC</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.option} onPress={() => setView('mispictos')}>
-                  <Text style={styles.optionEmoji}>⭐</Text>
-                  <Text style={styles.optionText}>Mis pictos</Text>
-                </TouchableOpacity>
               </View>
-            </>
-          )}
-
-          {view === 'name' && (
-            <>
-              <Text style={styles.title}>Nombre del pictograma</Text>
-              {(pendingUri || pendingUrl) && (
-                <Image
-                  source={{ uri: pendingUri && !pendingUrl ? `data:image/jpeg;base64,${pendingUri}` : pendingUrl! }}
-                  style={styles.preview}
-                  resizeMode="contain"
-                />
-              )}
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Escribe un nombre"
-                autoFocus
-              />
-              <TouchableOpacity
-                style={[styles.primaryButton, !name.trim() && styles.disabled]}
-                onPress={confirmName}
-                disabled={!name.trim()}
-              >
-                <Text style={styles.primaryButtonText}>Añadir</Text>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setView('name')}>
+                <Text style={styles.cancelText}>Volver</Text>
               </TouchableOpacity>
             </>
           )}
@@ -214,11 +243,10 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
                   value={query}
                   onChangeText={setQuery}
                   placeholder="Ej: comer, colegio..."
-                  onSubmitEditing={searchArasaac}
+                  onSubmitEditing={() => searchArasaac()}
                   returnKeyType="search"
-                  autoFocus
                 />
-                <TouchableOpacity style={styles.searchButton} onPress={searchArasaac}>
+                <TouchableOpacity style={styles.searchButton} onPress={() => searchArasaac()}>
                   <Text style={styles.primaryButtonText}>🔍</Text>
                 </TouchableOpacity>
               </View>
@@ -244,44 +272,11 @@ export default function AddPictoModal({ visible, period, misPictos, onClose, onA
                   </TouchableOpacity>
                 )}
               />
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setView('menu')}>
+                <Text style={styles.cancelText}>Volver</Text>
+              </TouchableOpacity>
             </>
           )}
-
-          {view === 'mispictos' && (
-            <>
-              <Text style={styles.title}>Mis pictos</Text>
-              {misPictos.length === 0 ? (
-                <Text style={styles.empty}>Todavía no has guardado ningún pictograma</Text>
-              ) : (
-                <FlatList
-                  data={misPictos}
-                  keyExtractor={(item) => item.id}
-                  numColumns={3}
-                  style={styles.resultsList}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity style={styles.resultItem} onPress={() => selectMisPicto(item)}>
-                      <Image
-                        source={{
-                          uri: item.isBase64
-                            ? `data:image/jpeg;base64,${item.localUri}`
-                            : item.localUri ?? item.imageUrl,
-                        }}
-                        style={styles.resultImage}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.resultText} numberOfLines={1}>
-                        {item.text}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              )}
-            </>
-          )}
-
-          <TouchableOpacity style={styles.cancelButton} onPress={view === 'menu' ? close : reset}>
-            <Text style={styles.cancelText}>{view === 'menu' ? 'Cancelar' : 'Volver'}</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -292,14 +287,44 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   sheet: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     padding: 20,
+    width: '100%',
+    maxWidth: 480,
     maxHeight: '85%',
+  },
+  label: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 10,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  dialogButton: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelBg: {
+    backgroundColor: '#90A4AE',
+  },
+  addBg: {
+    backgroundColor: '#3498DB',
+  },
+  dialogButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   title: {
     fontSize: 18,
@@ -314,12 +339,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   option: {
-    width: '48%',
+    width: '31%',
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
     alignItems: 'center',
     paddingVertical: 20,
-    marginBottom: 12,
   },
   optionEmoji: {
     fontSize: 32,

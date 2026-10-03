@@ -150,7 +150,7 @@ export default function AgendaScreen() {
     }
   };
 
-  const topH = Math.round(height * 0.35);
+  const topH = Math.round(height * 0.40);
   const titleH = Math.round(topH * 0.18);
   const dateH = Math.round(topH * 0.46);
   const actionsH = topH - titleH - dateH;
