@@ -150,10 +150,11 @@ export default function AgendaScreen() {
     }
   };
 
-  const topH = Math.round(height * 0.25);
+  const topH = Math.round(height * 0.35);
   const titleH = Math.round(topH * 0.18);
   const dateH = Math.round(topH * 0.46);
   const actionsH = topH - titleH - dateH;
+  const dateGap = s(8, 14);
   const headerPadH = s(16, 24);
   const headerFontSize = Math.min(s(22, 30), Math.round(titleH * 0.7));
   const actionFontSize = Math.min(s(14, 18), 16);
@@ -170,8 +171,8 @@ export default function AgendaScreen() {
         <Text style={[styles.headerTitle, { fontSize: headerFontSize }]}>📅 Mi Agenda</Text>
       </View>
 
-      <View style={styles.headerBackground}>
-        <DateSelector day={day} month={month} year={year} onChange={changeDate} height={dateH} />
+      <View style={[styles.headerBackground, { paddingBottom: dateGap }]}>
+        <DateSelector day={day} month={month} year={year} onChange={changeDate} height={dateH - dateGap} />
       </View>
 
       <View style={[styles.actionsContainer, { paddingHorizontal: s(12, 20), height: actionsH }]}>
