@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
 import { AgendaDay, Period, Pictogram, Settings } from '../types';
+import { getExpiryMessage, onRestored } from '../backup';
 
 const EMPTY_DAY: AgendaDay = { manana: [], tarde: [], noche: [] };
 const DEFAULT_SETTINGS: Settings = { pictoSize: 'normal', ttsLang: 'es-ES', ttsRate: 1.0 };
@@ -30,8 +32,24 @@ export function useAgenda() {
       if (s) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) });
       const mp = await AsyncStorage.getItem(KEY_MIS_PICTOS);
       if (mp) setMisPictos(JSON.parse(mp));
+      const expiryMsg = await getExpiryMessage();
+      if (expiryMsg) Alert.alert('Aviso', expiryMsg);
     })();
   }, []);
+
+  useEffect(() => {
+    return onRestored(() => {
+      (async () => {
+        const s = await AsyncStorage.getItem(KEY_SETTINGS);
+        setSettings(s ? { ...DEFAULT_SETTINGS, ...JSON.parse(s) } : DEFAULT_SETTINGS);
+        const mp = await AsyncStorage.getItem(KEY_MIS_PICTOS);
+        setMisPictos(mp ? JSON.parse(mp) : []);
+        const raw = await AsyncStorage.getItem(dateKey);
+        setAgenda(raw ? JSON.parse(raw) : EMPTY_DAY);
+        setSelected(null);
+      })();
+    });
+  }, [dateKey]);
 
   useEffect(() => {
     setSelected(null);
