@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "AgendaPicto",
+    "slug": "agendapicto",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a9e7a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "bundleIdentifier": "com.jorso.agendapicto",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Necesitamos acceso a tu galería para añadir pictogramas",
+        "NSCameraUsageDescription": "Necesitamos la cámara para hacer fotos de pictogramas",
+        "NSMicrophoneUsageDescription": "Necesitamos el micrófono para la voz"
+      }
+    },
+    "android": {
+      "package": "com.jorso.agendapicto",
+      "permissions": ["CAMERA", "READ_MEDIA_IMAGES"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "monochromeImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    }
+  }
+}
