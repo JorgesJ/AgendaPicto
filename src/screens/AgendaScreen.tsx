@@ -47,7 +47,7 @@ export default function AgendaScreen() {
     saveSettings,
   } = useAgenda();
 
-  const { s, factor } = useScale();
+  const { s, factor, height } = useScale();
 
   const [addPeriod, setAddPeriod] = useState<Period | null>(null);
   const [showDelete, setShowDelete] = useState(false);
@@ -150,12 +150,15 @@ export default function AgendaScreen() {
     }
   };
 
+  const topH = Math.round(height * 0.25);
+  const titleH = Math.round(topH * 0.18);
+  const dateH = Math.round(topH * 0.46);
+  const actionsH = topH - titleH - dateH;
   const headerPadH = s(16, 24);
-  const headerPadV = s(12, 18);
-  const headerFontSize = s(22, 30);
-  const actionFontSize = s(14, 18);
-  const actionPadV = s(10, 14);
-  const helpFontSize = s(12, 16);
+  const headerFontSize = Math.min(s(22, 30), Math.round(titleH * 0.7));
+  const actionFontSize = Math.min(s(14, 18), 16);
+  const actionPadV = Math.max(4, Math.round(actionsH * 0.1));
+  const helpFontSize = Math.min(s(12, 16), Math.round(actionsH * 0.2));
   const bottomEmojiFontSize = s(22, 32);
   const bottomTextFontSize = s(12, 16);
   const bottomPadH = s(20, 36);
@@ -163,30 +166,28 @@ export default function AgendaScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={[styles.header, { paddingHorizontal: headerPadH, paddingVertical: headerPadV }]}>
+      <View style={[styles.header, { paddingHorizontal: headerPadH, height: titleH }]}>
         <Text style={[styles.headerTitle, { fontSize: headerFontSize }]}>📅 Mi Agenda</Text>
       </View>
 
       <View style={styles.headerBackground}>
-        <DateSelector day={day} month={month} year={year} onChange={changeDate} />
+        <DateSelector day={day} month={month} year={year} onChange={changeDate} height={dateH} />
       </View>
 
-      <View style={[styles.actionsContainer, { paddingHorizontal: s(12, 20) }]}>
-        <View style={[styles.actionsRow, { marginBottom: s(8, 12) }]}>
+      <View style={[styles.actionsContainer, { paddingHorizontal: s(12, 20), height: actionsH }]}>
+        <View style={styles.actionsRow}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: COLORS.exportar, paddingVertical: actionPadV }]}
             onPress={exportPdf}
           >
-            <Text style={[styles.actionText, { fontSize: actionFontSize }]}>📄 Exportar PDF</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.actionText, { fontSize: actionFontSize }]}>📄 Exportar PDF</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: COLORS.borrar, paddingVertical: actionPadV }]}
             onPress={() => setShowClear(true)}
           >
-            <Text style={[styles.actionText, { fontSize: actionFontSize }]}>🗑️ Borrar Agenda</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.actionText, { fontSize: actionFontSize }]}>🗑️ Borrar Agenda</Text>
           </TouchableOpacity>
-        </View>
-        <View style={[styles.actionsRow, { marginBottom: s(8, 12) }]}>
           <TouchableOpacity
             style={[
               styles.actionButton,
@@ -195,7 +196,7 @@ export default function AgendaScreen() {
             onPress={toggleForbidden}
             disabled={!hasSelection}
           >
-            <Text style={[styles.actionText, { fontSize: actionFontSize }]}>✕ Prohibir</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.actionText, { fontSize: actionFontSize }]}>✕ Prohibir</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
@@ -205,10 +206,10 @@ export default function AgendaScreen() {
             onPress={() => setShowDelete(true)}
             disabled={!hasSelection}
           >
-            <Text style={[styles.actionText, { fontSize: actionFontSize }]}>🗑 Eliminar</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.actionText, { fontSize: actionFontSize }]}>🗑 Eliminar</Text>
           </TouchableOpacity>
         </View>
-        <Text style={[styles.helpText, { fontSize: helpFontSize, marginBottom: s(6, 10) }]}>
+        <Text numberOfLines={1} style={[styles.helpText, { fontSize: helpFontSize }]}>
           {hasSelection
             ? `Seleccionado: '${selectedPicto!.text}'`
             : 'Toca un pictograma para seleccionarlo'}
@@ -310,8 +311,7 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     backgroundColor: COLORS.fondo,
-    paddingTop: 10,
-    paddingBottom: 4,
+    justifyContent: 'space-evenly',
   },
   actionsRow: {
     flexDirection: 'row',

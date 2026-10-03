@@ -8,12 +8,13 @@ interface Props {
   month: number;
   year: number;
   onChange: (part: 'day' | 'month' | 'year', delta: number) => void;
+  height?: number;
 }
 
-function Arrow({ dir, onPress, size }: { dir: 'up' | 'down'; onPress: () => void; size: number }) {
+function Arrow({ dir, onPress, size, margin = 4 }: { dir: 'up' | 'down'; onPress: () => void; size: number; margin?: number }) {
   return (
     <TouchableOpacity
-      style={[styles.arrow, { width: size, height: size, borderRadius: size / 2 }]}
+      style={[styles.arrow, { width: size, height: size, borderRadius: size / 2, marginVertical: margin }]}
       onPress={onPress}
     >
       <Text style={[styles.arrowText, { fontSize: size * 0.4 }]}>{dir === 'up' ? '▲' : '▼'}</Text>
@@ -21,28 +22,37 @@ function Arrow({ dir, onPress, size }: { dir: 'up' | 'down'; onPress: () => void
   );
 }
 
-export default function DateSelector({ day, month, year, onChange }: Props) {
+export default function DateSelector({ day, month, year, onChange, height }: Props) {
   const { s } = useScale();
-  const arrowSize = s(36, 52);
-  const valueFontSize = s(18, 26);
-  const marginV = s(4, 8);
+  const compact = height !== undefined;
+  const arrowSize = compact ? Math.max(20, Math.floor((height - 16) / 2.75)) : s(36, 52);
+  const valueFontSize = compact ? Math.round(arrowSize * 0.62) : s(18, 26);
+  const marginV = compact ? 0 : s(4, 8);
+  const am = compact ? 2 : 4;
 
   return (
-    <View style={[styles.card, { paddingVertical: s(10, 16), marginHorizontal: s(12, 20), marginBottom: s(12, 16) }]}>
+    <View
+      style={[
+        styles.card,
+        compact
+          ? { height, paddingVertical: 4, marginHorizontal: s(12, 20), marginBottom: 0, alignItems: 'center' }
+          : { paddingVertical: s(10, 16), marginHorizontal: s(12, 20), marginBottom: s(12, 16) },
+      ]}
+    >
       <View style={styles.column}>
-        <Arrow dir="up" onPress={() => onChange('day', 1)} size={arrowSize} />
+        <Arrow dir="up" onPress={() => onChange('day', 1)} size={arrowSize} margin={am} />
         <Text style={[styles.value, { fontSize: valueFontSize, marginVertical: marginV }]}>{day}</Text>
-        <Arrow dir="down" onPress={() => onChange('day', -1)} size={arrowSize} />
+        <Arrow dir="down" onPress={() => onChange('day', -1)} size={arrowSize} margin={am} />
       </View>
       <View style={styles.column}>
-        <Arrow dir="up" onPress={() => onChange('month', 1)} size={arrowSize} />
+        <Arrow dir="up" onPress={() => onChange('month', 1)} size={arrowSize} margin={am} />
         <Text style={[styles.value, { fontSize: valueFontSize, marginVertical: marginV }]}>{MESES[month - 1]}</Text>
-        <Arrow dir="down" onPress={() => onChange('month', -1)} size={arrowSize} />
+        <Arrow dir="down" onPress={() => onChange('month', -1)} size={arrowSize} margin={am} />
       </View>
       <View style={styles.column}>
-        <Arrow dir="up" onPress={() => onChange('year', 1)} size={arrowSize} />
+        <Arrow dir="up" onPress={() => onChange('year', 1)} size={arrowSize} margin={am} />
         <Text style={[styles.value, { fontSize: valueFontSize, marginVertical: marginV }]}>{year}</Text>
-        <Arrow dir="down" onPress={() => onChange('year', -1)} size={arrowSize} />
+        <Arrow dir="down" onPress={() => onChange('year', -1)} size={arrowSize} margin={am} />
       </View>
     </View>
   );
