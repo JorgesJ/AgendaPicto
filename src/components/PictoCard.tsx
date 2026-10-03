@@ -38,7 +38,7 @@ export default function PictoCard({ picto, size, selected, onPress }: Props) {
           </View>
         )}
       </View>
-      <Text style={styles.label} numberOfLines={1}>
+      <Text style={[styles.label, { maxWidth: Math.max(90, size + 12) }]} numberOfLines={1}>
         {picto.text}
       </Text>
     </TouchableOpacity>

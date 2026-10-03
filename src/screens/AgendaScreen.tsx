@@ -47,14 +47,14 @@ export default function AgendaScreen() {
     saveSettings,
   } = useAgenda();
 
-  const { s, isTablet } = useScale();
+  const { s, factor } = useScale();
 
   const [addPeriod, setAddPeriod] = useState<Period | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [showClear, setShowClear] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const pictoSize = PICTO_SIZES[settings.pictoSize];
+  const pictoSize = Math.round(PICTO_SIZES[settings.pictoSize] * factor);
   const hasSelection = selected !== null && selectedPicto !== null;
 
   const pictoToImgSrc = async (p: Pictogram): Promise<string> => {
@@ -224,7 +224,7 @@ export default function AgendaScreen() {
             emoji={emoji}
             color={color}
             pictos={agenda[period]}
-            pictoSize={isTablet ? PICTO_SIZES['large'] : pictoSize}
+            pictoSize={pictoSize}
             selectedId={selected?.period === period ? selected.id : null}
             onSelect={(p) => selectPicto(period, p)}
             onAdd={() => setAddPeriod(period)}
