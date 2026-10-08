@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Speech from 'expo-speech';
 import { AgendaDay, Period, Pictogram, Settings } from '../types';
-import { getExpiryMessage, onRestored } from '../backup';
+import { getExpiryMessage, onRestored, runAutoBackup } from '../backup';
 
 const EMPTY_DAY: AgendaDay = { manana: [], tarde: [], noche: [] };
 const DEFAULT_SETTINGS: Settings = { pictoSize: 'normal', ttsLang: 'es-ES', ttsRate: 1.0 };
@@ -35,6 +35,14 @@ export function useAgenda() {
       const expiryMsg = await getExpiryMessage();
       if (expiryMsg) Alert.alert('Aviso', expiryMsg);
     })();
+  }, []);
+
+  useEffect(() => {
+    runAutoBackup();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') runAutoBackup();
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {

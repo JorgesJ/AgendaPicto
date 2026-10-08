@@ -2,6 +2,7 @@
   "expo": {
     "name": "AgendaPicto",
     "slug": "agendapicto",
+    "scheme": "db-bhqmzhogt730eb2",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -16,7 +17,9 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Necesitamos acceso a tu galería para añadir pictogramas",
         "NSCameraUsageDescription": "Necesitamos la cámara para hacer fotos de pictogramas",
-        "NSMicrophoneUsageDescription": "Necesitamos el micrófono para la voz"
+        "NSMicrophoneUsageDescription": "Necesitamos el micrófono para la voz",
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
       }
     },
     "android": {

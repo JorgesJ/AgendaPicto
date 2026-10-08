@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, AlertButton, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS, PictoSize, Settings } from '../types';
 import PinDialog from '../components/PinDialog';
 import {
   BackupFile,
   applyBackup,
   checkPin,
+  connectDropbox,
   createBackup,
+  downloadLatestFromDropbox,
   findLatestBackupUri,
   hasPin,
+  isDropboxConnected,
   pickBackupUri,
   readBackup,
   setPin,
   shareBackup,
+  syncToDropbox,
 } from '../backup';
 
 interface Props {
@@ -32,12 +36,20 @@ const LANGS: { value: string; label: string }[] = [
   { value: 'es-ES', label: 'Español (España)' },
 ];
 
-type PinAction = { kind: 'backup'; mode: 'verify' | 'create' } | { kind: 'restore'; mode: 'verify' };
+type PinAction =
+  | { kind: 'backup'; mode: 'verify' | 'create' }
+  | { kind: 'connect'; mode: 'verify' | 'create' }
+  | { kind: 'restore'; mode: 'verify' };
 
 export default function SettingsScreen({ visible, settings, onSave, onClose }: Props) {
   const [pinAction, setPinAction] = useState<PinAction | null>(null);
   const [pendingRestore, setPendingRestore] = useState<BackupFile | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dbxConnected, setDbxConnected] = useState(false);
+
+  useEffect(() => {
+    if (visible) isDropboxConnected().then(setDbxConnected);
+  }, [visible]);
 
   const startBackup = async () => {
     if (busy) return;
@@ -45,18 +57,52 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
     setPinAction({ kind: 'backup', mode: has ? 'verify' : 'create' });
   };
 
+  const startConnect = async () => {
+    if (busy) return;
+    const has = await hasPin();
+    setPinAction({ kind: 'connect', mode: has ? 'verify' : 'create' });
+  };
+
   const startRestore = async () => {
     if (busy) return;
-    try {
-      let uri = await findLatestBackupUri();
-      if (!uri) uri = await pickBackupUri();
-      if (!uri) return;
-      const backup = await readBackup(uri);
-      setPendingRestore(backup);
-      setPinAction({ kind: 'restore', mode: 'verify' });
-    } catch {
-      Alert.alert('Restore', 'No se pudo leer el backup. El archivo no es válido.');
+    const connected = await isDropboxConnected();
+    const local = await findLatestBackupUri();
+    const load = async (get: () => Promise<string | null>) => {
+      try {
+        const uri = await get();
+        if (!uri) {
+          Alert.alert('Restore', 'No se encontró ningún backup.');
+          return;
+        }
+        const backup = await readBackup(uri);
+        setPendingRestore(backup);
+        setPinAction({ kind: 'restore', mode: 'verify' });
+      } catch {
+        Alert.alert('Restore', 'No se pudo leer el backup. Comprueba la conexión o que el archivo sea válido.');
+      }
+    };
+    const buttons: AlertButton[] = [];
+    if (connected) {
+      buttons.push({ text: 'Última copia de Dropbox', onPress: () => load(downloadLatestFromDropbox) });
     }
+    if (local) {
+      buttons.push({ text: 'Última copia del iPad', onPress: () => load(async () => local) });
+    }
+    buttons.push({ text: 'Elegir archivo', onPress: () => load(pickBackupUri) });
+    buttons.push({ text: 'Cancelar', style: 'cancel' });
+    Alert.alert('Restaurar desde', undefined, buttons);
+  };
+
+  const runConnect = async () => {
+    setBusy(true);
+    try {
+      const ok = await connectDropbox();
+      setDbxConnected(ok);
+      if (ok) Alert.alert('Dropbox', 'Dropbox conectado correctamente.');
+    } catch {
+      Alert.alert('Dropbox', 'No se pudo conectar con Dropbox.');
+    }
+    setBusy(false);
   };
 
   const runBackup = async () => {
@@ -64,6 +110,7 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
     try {
       const uri = await createBackup();
       await shareBackup(uri);
+      await syncToDropbox();
       Alert.alert('Backup', 'Backup creado correctamente.');
     } catch {
       Alert.alert('Backup', 'No se pudo crear el backup.');
@@ -85,14 +132,15 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
 
   const handlePin = async (pin: string): Promise<string | null> => {
     if (!pinAction) return null;
-    if (pinAction.kind === 'backup') {
+    if (pinAction.kind === 'backup' || pinAction.kind === 'connect') {
       if (pinAction.mode === 'create') {
         await setPin(pin);
       } else if (!(await checkPin(pin))) {
         return 'PIN incorrecto';
       }
+      const kind = pinAction.kind;
       setPinAction(null);
-      setTimeout(runBackup, 500);
+      setTimeout(kind === 'connect' ? runConnect : runBackup, 500);
       return null;
     }
     const backup = pendingRestore;
@@ -173,6 +221,13 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
                 <Text style={[styles.optionText, styles.optionTextActive]}>♻️ Restore</Text>
               </TouchableOpacity>
             </View>
+            {dbxConnected ? (
+              <Text style={styles.statusText}>☁️ Dropbox conectado</Text>
+            ) : (
+              <TouchableOpacity style={[styles.option, styles.backupButton]} onPress={startConnect}>
+                <Text style={[styles.optionText, styles.optionTextActive]}>☁️ Conectar Dropbox</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeText}>Cerrar</Text>
@@ -183,7 +238,13 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
         <PinDialog
           visible={pinAction !== null}
           mode={pinAction?.mode ?? 'verify'}
-          title={pinAction?.kind === 'restore' ? 'Restaurar backup' : 'Hacer backup'}
+          title={
+            pinAction?.kind === 'restore'
+              ? 'Restaurar backup'
+              : pinAction?.kind === 'connect'
+              ? 'Conectar Dropbox'
+              : 'Hacer backup'
+          }
           onCancel={cancelPin}
           onSubmit={handlePin}
         />
@@ -248,6 +309,12 @@ const styles = StyleSheet.create({
   },
   backupButton: {
     backgroundColor: COLORS.primary,
+  },
+  statusText: {
+    color: '#555',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 4,
   },
   closeButton: {
     marginTop: 16,
