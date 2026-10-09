@@ -47,7 +47,7 @@ export default function AgendaScreen() {
     saveSettings,
   } = useAgenda();
 
-  const { s, factor, height, isLandscape } = useScale();
+  const { s, factor, width, height, isLandscape } = useScale();
 
   const [addPeriod, setAddPeriod] = useState<Period | null>(null);
   const [showDelete, setShowDelete] = useState(false);
@@ -168,7 +168,7 @@ export default function AgendaScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={[styles.header, { paddingHorizontal: headerPadH, height: titleH }]}>
-        <Text style={[styles.headerTitle, { fontSize: headerFontSize }]}>📅 Mi Agenda</Text>
+        <Text style={[styles.headerTitle, { fontSize: headerFontSize }]}>📅 Mi Agenda  {Math.round(width)}x{Math.round(height)} {isLandscape ? 'H' : 'V'} top={topH}</Text>
       </View>
 
       <View style={[styles.headerBackground, { paddingBottom: dateGap }]}>
