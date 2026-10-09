@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -49,6 +49,7 @@ export default function AgendaScreen() {
   } = useAgenda();
 
   const { s, factor, height, isLandscape } = useScale();
+  const insets = useSafeAreaInsets();
 
   const [addPeriod, setAddPeriod] = useState<Period | null>(null);
   const [showDelete, setShowDelete] = useState(false);
@@ -239,7 +240,13 @@ export default function AgendaScreen() {
         ))}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingVertical: bottomPadV }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingVertical: bottomPadV },
+          isLandscape && { paddingBottom: bottomPadV + insets.bottom },
+        ]}
+      >
         <TouchableOpacity style={[styles.bottomButton, { paddingHorizontal: bottomPadH }]} onPress={goToday}>
           <Text style={[styles.bottomEmoji, { fontSize: bottomEmojiFontSize }]}>📅</Text>
           <Text style={[styles.bottomText, { fontSize: bottomTextFontSize }]}>Hoy</Text>
