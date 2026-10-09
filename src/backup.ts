@@ -190,7 +190,8 @@ async function dbxToken(): Promise<string | null> {
     body: `grant_type=refresh_token&client_id=${DBX_APP_KEY}&refresh_token=${encodeURIComponent(refresh)}`,
   });
   const json = await res.json();
-  return json.access_token ?? null;
+  if (!json.access_token) throw new Error(`Token: ${json.error_description ?? json.error ?? res.status}`);
+  return json.access_token;
 }
 
 export async function isDropboxConnected(): Promise<boolean> {
@@ -226,7 +227,7 @@ export async function connectDropbox(): Promise<boolean> {
       `&code_verifier=${verifier}&redirect_uri=${redirect}`,
   });
   const json = await res.json();
-  if (!json.refresh_token) return false;
+  if (!json.refresh_token) throw new Error(`Token: ${json.error_description ?? json.error ?? res.status}`);
   await AsyncStorage.setItem(KEY_DBX, json.refresh_token);
   return true;
 }
@@ -238,21 +239,22 @@ async function listRemote(token: string): Promise<string[]> {
     body: JSON.stringify({ path: '' }),
   });
   const json = await res.json();
+  if (!json.entries) throw new Error(`Listado: ${json.error_summary ?? res.status}`);
   return ((json.entries ?? []) as { '.tag': string; name: string }[])
     .filter((e) => e['.tag'] === 'file' && e.name.startsWith(FILE_PREFIX))
     .map((e) => e.name)
     .sort();
 }
 
-export async function syncToDropbox(): Promise<void> {
+export async function syncToDropbox(force = false): Promise<string | null> {
   try {
     const token = await dbxToken();
-    if (!token) return;
+    if (!token) return 'Dropbox no está conectado';
     const files = await listLocal();
-    if (files.length === 0) return;
+    if (files.length === 0) return 'No hay ninguna copia en el iPad';
     const name = files[files.length - 1];
     const done = await AsyncStorage.getItem(KEY_LAST_UPLOAD);
-    if (done !== name) {
+    if (force || done !== name) {
       const up = await FileSystem.uploadAsync(
         'https://content.dropboxapi.com/2/files/upload',
         `${BACKUP_DIR}${name}`,
@@ -266,7 +268,7 @@ export async function syncToDropbox(): Promise<void> {
           },
         }
       );
-      if (up.status !== 200) return;
+      if (up.status !== 200) return `Subida ${up.status}: ${up.body}`;
       await AsyncStorage.setItem(KEY_LAST_UPLOAD, name);
     }
     const remote = await listRemote(token);
@@ -278,7 +280,10 @@ export async function syncToDropbox(): Promise<void> {
         body: JSON.stringify({ path: `/${f}` }),
       });
     }
-  } catch {}
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
 }
 
 export async function downloadLatestFromDropbox(): Promise<string | null> {

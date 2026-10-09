@@ -98,11 +98,19 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
     try {
       const ok = await connectDropbox();
       setDbxConnected(ok);
-      if (ok) Alert.alert('Dropbox', 'Dropbox conectado correctamente.');
-    } catch {
-      Alert.alert('Dropbox', 'No se pudo conectar con Dropbox.');
+      Alert.alert('Dropbox', ok ? 'Dropbox conectado correctamente.' : 'No se completó la conexión.');
+    } catch (e) {
+      Alert.alert('Dropbox', `No se pudo conectar: ${e instanceof Error ? e.message : String(e)}`);
     }
     setBusy(false);
+  };
+
+  const uploadNow = async () => {
+    if (busy) return;
+    setBusy(true);
+    const err = await syncToDropbox(true);
+    setBusy(false);
+    Alert.alert('Dropbox', err ? `Error: ${err}` : 'Última copia subida a Dropbox.');
   };
 
   const runBackup = async () => {
@@ -221,13 +229,19 @@ export default function SettingsScreen({ visible, settings, onSave, onClose }: P
                 <Text style={[styles.optionText, styles.optionTextActive]}>♻️ Restore</Text>
               </TouchableOpacity>
             </View>
-            {dbxConnected ? (
-              <Text style={styles.statusText}>☁️ Dropbox conectado</Text>
-            ) : (
+            {dbxConnected ? <Text style={styles.statusText}>☁️ Dropbox conectado</Text> : null}
+            <View style={styles.optionsRow}>
               <TouchableOpacity style={[styles.option, styles.backupButton]} onPress={startConnect}>
-                <Text style={[styles.optionText, styles.optionTextActive]}>☁️ Conectar Dropbox</Text>
+                <Text style={[styles.optionText, styles.optionTextActive]}>
+                  {dbxConnected ? '☁️ Reconectar Dropbox' : '☁️ Conectar Dropbox'}
+                </Text>
               </TouchableOpacity>
-            )}
+              {dbxConnected ? (
+                <TouchableOpacity style={[styles.option, styles.backupButton]} onPress={uploadNow}>
+                  <Text style={[styles.optionText, styles.optionTextActive]}>⬆️ Subir ahora</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <Text style={styles.closeText}>Cerrar</Text>
