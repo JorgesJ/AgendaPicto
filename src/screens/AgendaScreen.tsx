@@ -47,7 +47,7 @@ export default function AgendaScreen() {
     saveSettings,
   } = useAgenda();
 
-  const { s, factor, height } = useScale();
+  const { s, factor, height, isLandscape } = useScale();
 
   const [addPeriod, setAddPeriod] = useState<Period | null>(null);
   const [showDelete, setShowDelete] = useState(false);
@@ -150,20 +150,20 @@ export default function AgendaScreen() {
     }
   };
 
-  const topH = Math.round(height * 0.40);
-  const titleH = Math.round(topH * 0.18);
-  const dateH = Math.round(topH * 0.46);
+  const topH = Math.round(height * (isLandscape ? 0.28 : 0.40));
+  const titleH = Math.round(topH * (isLandscape ? 0.16 : 0.18));
+  const dateH = Math.round(topH * (isLandscape ? 0.50 : 0.46));
   const actionsH = topH - titleH - dateH;
-  const dateGap = s(8, 14);
+  const dateGap = isLandscape ? s(6, 10) : s(8, 14);
   const headerPadH = s(16, 24);
   const headerFontSize = Math.min(s(22, 30), Math.round(titleH * 0.7));
   const actionFontSize = Math.min(s(14, 18), 16);
   const actionPadV = Math.max(4, Math.round(actionsH * 0.1));
   const helpFontSize = Math.min(s(12, 16), Math.round(actionsH * 0.2));
-  const bottomEmojiFontSize = s(22, 32);
-  const bottomTextFontSize = s(12, 16);
+  const bottomEmojiFontSize = isLandscape ? s(16, 22) : s(22, 32);
+  const bottomTextFontSize = isLandscape ? s(11, 14) : s(12, 16);
   const bottomPadH = s(20, 36);
-  const bottomPadV = s(8, 14);
+  const bottomPadV = isLandscape ? s(3, 5) : s(8, 14);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
