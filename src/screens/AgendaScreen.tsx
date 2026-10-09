@@ -14,6 +14,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { useAgenda } from '../hooks/useAgenda';
 import { useScale } from '../hooks/useScale';
+import { setLayoutSize } from '../layoutSize';
 import { COLORS, MESES, Period, PICTO_SIZES, Pictogram } from '../types';
 import DateSelector from '../components/DateSelector';
 import PeriodRow from '../components/PeriodRow';
@@ -47,7 +48,7 @@ export default function AgendaScreen() {
     saveSettings,
   } = useAgenda();
 
-  const { s, factor, width, height, isLandscape } = useScale();
+  const { s, factor, height, isLandscape } = useScale();
 
   const [addPeriod, setAddPeriod] = useState<Period | null>(null);
   const [showDelete, setShowDelete] = useState(false);
@@ -166,9 +167,13 @@ export default function AgendaScreen() {
   const bottomPadV = isLandscape ? s(3, 5) : s(8, 14);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={['top', 'left', 'right']}
+      onLayout={(e) => setLayoutSize(e.nativeEvent.layout.width, e.nativeEvent.layout.height)}
+    >
       <View style={[styles.header, { paddingHorizontal: headerPadH, height: titleH }]}>
-        <Text style={[styles.headerTitle, { fontSize: headerFontSize }]}>📅 Mi Agenda  {Math.round(width)}x{Math.round(height)} {isLandscape ? 'H' : 'V'} top={topH}</Text>
+        <Text style={[styles.headerTitle, { fontSize: headerFontSize }]}>📅 Mi Agenda</Text>
       </View>
 
       <View style={[styles.headerBackground, { paddingBottom: dateGap }]}>
