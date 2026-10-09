@@ -25,9 +25,9 @@ export interface Settings {
 }
 
 export const PICTO_SIZES: Record<PictoSize, number> = {
-  small: 44,
-  normal: 56,
-  large: 72,
+  small: 52,
+  normal: 66,
+  large: 84,
 };
 
 export const COLORS = {
