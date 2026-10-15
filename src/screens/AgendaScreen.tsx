@@ -244,7 +244,7 @@ export default function AgendaScreen() {
         style={[
           styles.bottomBar,
           { paddingVertical: bottomPadV },
-          isLandscape && { paddingBottom: bottomPadV + insets.bottom },
+          isLandscape && { paddingBottom: bottomPadV + insets.bottom + 14 },
         ]}
       >
         <TouchableOpacity style={[styles.bottomButton, { paddingHorizontal: bottomPadH }]} onPress={goToday}>
