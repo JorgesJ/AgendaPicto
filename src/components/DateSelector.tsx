@@ -26,29 +26,32 @@ function Arrow({ dir, onPress, size, margin = 2 }: { dir: 'up' | 'down'; onPress
 }
 
 export default function DateSelector({ day, month, year, onChange, height }: Props) {
-  const { s } = useScale();
+  const { s, isLandscape } = useScale();
   const h = height ?? 150;
   const am = 2;
   const arrowSize = Math.max(22, Math.min(44, Math.floor((h - 16) / 3.4)));
-  const boxH = Math.max(28, Math.min(100, h - 8 - 2 * (arrowSize + 2 * am)));
+  const boxBase = Math.max(28, Math.min(100, h - 8 - 2 * (arrowSize + 2 * am)));
+  const boxH = isLandscape ? boxBase : Math.max(28, Math.round(boxBase * 0.8));
   const numFont = Math.round(boxH * 0.5);
   const labelFont = Math.round(boxH * 0.34);
   const deFont = Math.round(Math.max(12, boxH * 0.3));
-  const nameFont = Math.max(12, Math.min(26, Math.round((h - 8) * 0.2)));
+  const nameFont = Math.max(11, Math.min(26, Math.round((h - 8) * (isLandscape ? 0.16 : 0.17))));
   const cellMaxH = Math.max(14, h - 8 - Math.round(nameFont * 1.3) - 12);
+  const cellFont = isLandscape ? 10 : 11;
+  const calendarFlex = isLandscape ? 1.6 : 1.9;
   const weekday = new Date(year, month - 1, day).getDay();
   const todayIdx = (weekday + 6) % 7;
 
   return (
     <View style={[styles.card, { height: h, marginHorizontal: s(12, 20) }]}>
-      <View style={[styles.calendar, { flex: 2.2 }]}>
+      <View style={[styles.calendar, { flex: calendarFlex }]}>
         <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.dayName, { fontSize: nameFont }]}>
           {DIAS_SEMANA[weekday]}
         </Text>
         <View style={styles.weekRow}>
           {LETRAS.map((letter, i) => (
             <View key={letter + i} style={[styles.cell, { maxHeight: cellMaxH }, i === todayIdx && styles.cellOn]}>
-              <Text style={[styles.cellText, i === todayIdx && styles.cellTextOn]}>{letter}</Text>
+              <Text style={[styles.cellText, { fontSize: cellFont }, i === todayIdx && styles.cellTextOn]}>{letter}</Text>
             </View>
           ))}
         </View>
