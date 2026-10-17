@@ -164,6 +164,7 @@ export default function AgendaScreen() {
   const actionFontSize = Math.min(s(14, 18), 16);
   const actionPadV = Math.max(4, Math.round(actionsH * 0.1));
   const helpFontSize = Math.min(s(12, 16), Math.round(actionsH * 0.2));
+  const movingFontSize = Math.min(20, Math.round(helpFontSize * 1.3));
   const bottomEmojiFontSize = isLandscape ? s(16, 22) : s(22, 32);
   const bottomTextFontSize = isLandscape ? s(11, 14) : s(12, 16);
   const bottomPadH = s(20, 36);
@@ -218,13 +219,19 @@ export default function AgendaScreen() {
             <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.actionText, { fontSize: actionFontSize }]}>🗑 Eliminar</Text>
           </TouchableOpacity>
         </View>
-        <Text numberOfLines={1} style={[styles.helpText, { fontSize: helpFontSize }]}>
-          {moving
-            ? 'Toca dónde quieres ponerlo'
-            : hasSelection
-            ? `Seleccionado: '${selectedPicto!.text}'`
-            : 'Toca un pictograma para seleccionarlo'}
-        </Text>
+        {moving ? (
+          <View style={styles.movingBanner}>
+            <Text numberOfLines={1} style={[styles.movingBannerText, { fontSize: movingFontSize }]}>
+              ✋ Toca dónde quieres ponerlo
+            </Text>
+          </View>
+        ) : (
+          <Text numberOfLines={1} style={[styles.helpText, { fontSize: helpFontSize }]}>
+            {hasSelection
+              ? `Seleccionado: '${selectedPicto!.text}'`
+              : 'Toca un pictograma para seleccionarlo'}
+          </Text>
+        )}
       </View>
 
       <ScrollView style={styles.periods}>
@@ -239,6 +246,7 @@ export default function AgendaScreen() {
             pictoSize={pictoSize}
             selectedId={selected?.period === period ? selected.id : null}
             movingId={moving?.period === period ? moving.id : null}
+            dimmed={moving !== null && moving.period !== period}
             onSelect={(p) => selectPicto(period, p)}
             onLongPress={(p) => startMove(period, p)}
             onAdd={() => setAddPeriod(period)}
@@ -347,6 +355,18 @@ const styles = StyleSheet.create({
   },
   helpText: {
     color: '#777',
+    textAlign: 'center',
+  },
+  movingBanner: {
+    alignSelf: 'center',
+    backgroundColor: '#00c853',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 3,
+  },
+  movingBannerText: {
+    color: '#fff',
+    fontWeight: 'bold',
     textAlign: 'center',
   },
   periods: {

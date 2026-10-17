@@ -1,5 +1,5 @@
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS, Pictogram } from '../types';
 
 const LONG_PRESS_MS = 3000;
@@ -10,28 +10,50 @@ interface Props {
   size: number;
   selected: boolean;
   moving?: boolean;
+  target?: boolean;
   onPress: () => void;
   onLongPress?: () => void;
 }
 
-export default function PictoCard({ picto, size, selected, moving = false, onPress, onLongPress }: Props) {
+export default function PictoCard({ picto, size, selected, moving = false, target = false, onPress, onLongPress }: Props) {
+  const wiggle = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!moving) return undefined;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wiggle, { toValue: 1, duration: 120, useNativeDriver: true }),
+        Animated.timing(wiggle, { toValue: -1, duration: 120, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+      wiggle.setValue(0);
+    };
+  }, [moving, wiggle]);
+
+  const rotate = wiggle.interpolate({ inputRange: [-1, 1], outputRange: ['-2.5deg', '2.5deg'] });
+
   const uri = picto.isBase64
     ? `data:image/jpeg;base64,${picto.localUri}`
     : picto.localUri ?? picto.imageUrl;
 
   const borderColor = picto.forbidden
     ? COLORS.prohibicion
-    : moving
+    : moving || target
     ? MOVING_COLOR
     : selected
     ? COLORS.primary
     : '#ddd';
 
   return (
+    <Animated.View style={{ marginRight: 8, transform: [{ rotate }] }}>
     <TouchableOpacity
       style={[
         styles.card,
         { borderColor },
+        target && !picto.forbidden && styles.target,
         selected && styles.selected,
         moving && styles.moving,
       ]}
@@ -52,6 +74,7 @@ export default function PictoCard({ picto, size, selected, moving = false, onPre
         {picto.text}
       </Text>
     </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -61,8 +84,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 3,
     padding: 6,
-    marginRight: 8,
     alignItems: 'center',
+  },
+  target: {
+    borderStyle: 'dashed',
   },
   selected: {
     transform: [{ scale: 1.05 }],

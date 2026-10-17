@@ -13,6 +13,7 @@ interface Props {
   pictoSize: number;
   selectedId: string | null;
   movingId?: string | null;
+  dimmed?: boolean;
   onSelect: (picto: Pictogram) => void;
   onLongPress?: (picto: Pictogram) => void;
   onAdd: () => void;
@@ -26,6 +27,7 @@ export default function PeriodRow({
   pictoSize,
   selectedId,
   movingId = null,
+  dimmed = false,
   onSelect,
   onLongPress,
   onAdd,
@@ -53,9 +55,10 @@ export default function PeriodRow({
   const marginV = s(4, 8);
 
   return (
-    <View style={[
+    <View pointerEvents={dimmed ? 'none' : 'auto'} style={[
       styles.row,
       {
+        opacity: dimmed ? 0.35 : 1,
         backgroundColor: color,
         minHeight,
         padding,
@@ -81,6 +84,7 @@ export default function PeriodRow({
             size={pictoSize}
             selected={p.id === selectedId}
             moving={p.id === movingId}
+            target={movingId !== null && p.id !== movingId}
             onPress={() => onSelect(p)}
             onLongPress={() => onLongPress?.(p)}
           />
