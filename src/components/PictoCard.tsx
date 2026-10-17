@@ -22,8 +22,8 @@ export default function PictoCard({ picto, size, selected, moving = false, targe
     if (!moving) return undefined;
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(wiggle, { toValue: 1, duration: 120, useNativeDriver: true }),
-        Animated.timing(wiggle, { toValue: -1, duration: 120, useNativeDriver: true }),
+        Animated.timing(wiggle, { toValue: 1, duration: 120, useNativeDriver: false }),
+        Animated.timing(wiggle, { toValue: -1, duration: 120, useNativeDriver: false }),
       ])
     );
     loop.start();
@@ -48,7 +48,7 @@ export default function PictoCard({ picto, size, selected, moving = false, targe
     : '#ddd';
 
   return (
-    <Animated.View style={{ marginRight: 8, transform: [{ rotate: moving ? rotate : '0deg' }] }}>
+    <Animated.View style={{ marginRight: 8, transform: [{ rotate }] }}>
     <TouchableOpacity
       style={[
         styles.card,
