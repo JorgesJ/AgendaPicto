@@ -36,11 +36,13 @@ export default function AgendaScreen() {
     agenda,
     selected,
     selectedPicto,
+    moving,
     settings,
     misPictos,
     changeDate,
     goToday,
     selectPicto,
+    startMove,
     addPicto,
     removeSelected,
     toggleForbidden,
@@ -217,7 +219,9 @@ export default function AgendaScreen() {
           </TouchableOpacity>
         </View>
         <Text numberOfLines={1} style={[styles.helpText, { fontSize: helpFontSize }]}>
-          {hasSelection
+          {moving
+            ? 'Toca dónde quieres ponerlo'
+            : hasSelection
             ? `Seleccionado: '${selectedPicto!.text}'`
             : 'Toca un pictograma para seleccionarlo'}
         </Text>
@@ -234,7 +238,9 @@ export default function AgendaScreen() {
             pictos={agenda[period]}
             pictoSize={pictoSize}
             selectedId={selected?.period === period ? selected.id : null}
+            movingId={moving?.period === period ? moving.id : null}
             onSelect={(p) => selectPicto(period, p)}
+            onLongPress={(p) => startMove(period, p)}
             onAdd={() => setAddPeriod(period)}
           />
         ))}

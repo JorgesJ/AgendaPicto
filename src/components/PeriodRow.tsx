@@ -12,7 +12,9 @@ interface Props {
   pictos: Pictogram[];
   pictoSize: number;
   selectedId: string | null;
+  movingId?: string | null;
   onSelect: (picto: Pictogram) => void;
+  onLongPress?: (picto: Pictogram) => void;
   onAdd: () => void;
 }
 
@@ -23,7 +25,9 @@ export default function PeriodRow({
   pictos,
   pictoSize,
   selectedId,
+  movingId = null,
   onSelect,
+  onLongPress,
   onAdd,
 }: Props) {
   const { s } = useScale();
@@ -76,7 +80,9 @@ export default function PeriodRow({
             picto={p}
             size={pictoSize}
             selected={p.id === selectedId}
+            moving={p.id === movingId}
             onPress={() => onSelect(p)}
+            onLongPress={() => onLongPress?.(p)}
           />
         ))}
       </ScrollView>

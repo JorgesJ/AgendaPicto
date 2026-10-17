@@ -21,6 +21,7 @@ export function useAgenda() {
   const [year, setYear] = useState(now.getFullYear());
   const [agenda, setAgenda] = useState<AgendaDay>(EMPTY_DAY);
   const [selected, setSelected] = useState<{ period: Period; id: string } | null>(null);
+  const [moving, setMoving] = useState<{ period: Period; id: string } | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [misPictos, setMisPictos] = useState<Pictogram[]>([]);
 
@@ -55,12 +56,14 @@ export function useAgenda() {
         const raw = await AsyncStorage.getItem(dateKey);
         setAgenda(raw ? JSON.parse(raw) : EMPTY_DAY);
         setSelected(null);
+        setMoving(null);
       })();
     });
   }, [dateKey]);
 
   useEffect(() => {
     setSelected(null);
+    setMoving(null);
     (async () => {
       const raw = await AsyncStorage.getItem(dateKey);
       setAgenda(raw ? JSON.parse(raw) : EMPTY_DAY);
@@ -111,8 +114,29 @@ export function useAgenda() {
     [settings]
   );
 
+  const startMove = useCallback((period: Period, picto: Pictogram) => {
+    setSelected(null);
+    setMoving({ period, id: picto.id });
+  }, []);
+
   const selectPicto = useCallback(
     (period: Period, picto: Pictogram) => {
+      if (moving) {
+        if (moving.period !== period) return;
+        if (moving.id === picto.id) {
+          setMoving(null);
+          return;
+        }
+        const list = [...agenda[period]];
+        const from = list.findIndex((p) => p.id === moving.id);
+        const to = list.findIndex((p) => p.id === picto.id);
+        setMoving(null);
+        if (from < 0 || to < 0) return;
+        const [item] = list.splice(from, 1);
+        list.splice(to, 0, item);
+        persist({ ...agenda, [period]: list });
+        return;
+      }
       if (selected && selected.period === period && selected.id === picto.id) {
         setSelected(null);
       } else {
@@ -120,12 +144,13 @@ export function useAgenda() {
         speak(picto);
       }
     },
-    [selected, speak]
+    [selected, moving, agenda, persist, speak]
   );
 
   const addPicto = useCallback(
     async (period: Period, picto: Pictogram) => {
       const next = { ...agenda, [period]: [...agenda[period], picto] };
+      setMoving(null);
       await persist(next);
       const exists = misPictos.some(
         (p) => p.text === picto.text && p.imageUrl === picto.imageUrl && p.localUri === picto.localUri
@@ -164,6 +189,7 @@ export function useAgenda() {
 
   const clearDay = useCallback(async () => {
     setSelected(null);
+    setMoving(null);
     await persist(EMPTY_DAY);
   }, [persist]);
 
@@ -183,11 +209,13 @@ export function useAgenda() {
     agenda,
     selected,
     selectedPicto,
+    moving,
     settings,
     misPictos,
     changeDate,
     goToday,
     selectPicto,
+    startMove,
     addPicto,
     removeSelected,
     toggleForbidden,

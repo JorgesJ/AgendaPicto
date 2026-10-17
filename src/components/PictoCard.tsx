@@ -2,20 +2,27 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS, Pictogram } from '../types';
 
+const LONG_PRESS_MS = 3000;
+const MOVING_COLOR = '#00c853';
+
 interface Props {
   picto: Pictogram;
   size: number;
   selected: boolean;
+  moving?: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
 }
 
-export default function PictoCard({ picto, size, selected, onPress }: Props) {
+export default function PictoCard({ picto, size, selected, moving = false, onPress, onLongPress }: Props) {
   const uri = picto.isBase64
     ? `data:image/jpeg;base64,${picto.localUri}`
     : picto.localUri ?? picto.imageUrl;
 
   const borderColor = picto.forbidden
     ? COLORS.prohibicion
+    : moving
+    ? MOVING_COLOR
     : selected
     ? COLORS.primary
     : '#ddd';
@@ -26,8 +33,11 @@ export default function PictoCard({ picto, size, selected, onPress }: Props) {
         styles.card,
         { borderColor },
         selected && styles.selected,
+        moving && styles.moving,
       ]}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={LONG_PRESS_MS}
       activeOpacity={0.7}
     >
       <View style={{ width: size, height: size }}>
@@ -56,6 +66,15 @@ const styles = StyleSheet.create({
   },
   selected: {
     transform: [{ scale: 1.05 }],
+  },
+  moving: {
+    transform: [{ scale: 1.1 }],
+    backgroundColor: '#e8f5e9',
+    elevation: 6,
+    shadowColor: MOVING_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
   },
   image: {
     width: '100%',
