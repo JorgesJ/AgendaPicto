@@ -48,7 +48,7 @@ export default function PictoCard({ picto, size, selected, moving = false, targe
     : '#ddd';
 
   return (
-    <Animated.View style={{ marginRight: 8, transform: [{ rotate }] }}>
+    <Animated.View style={{ marginRight: 8, transform: [{ rotate: moving ? rotate : '0deg' }] }}>
     <TouchableOpacity
       style={[
         styles.card,
